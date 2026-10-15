@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNSLogHUB</title>
+    <meta name="keywords" content="dnsloghub">
+    <meta name="description" content="dnsloghub">
+    <link rel="stylesheet" href="/css/theme.css">
+    <script>
+        window.DNSLOGHUB_DICT = {
+            'zh-CN': {
+                theme_toggle: '切换明暗主题',
+                lang_toggle: '切换语言',
+                'welcome.title': '欢迎使用 DNSLogHUB',
+                'welcome.subtitle': 'DNSLog / HTTP / SSRF 多协议安全检测平台',
+                'welcome.register': '注册账户',
+                'welcome.login': '进入控制台',
+                'welcome.docs': 'API 文档'
+            },
+            'en': {
+                theme_toggle: 'Toggle theme',
+                lang_toggle: 'Switch language',
+                'welcome.title': 'Welcome to DNSLogHUB',
+                'welcome.subtitle': 'Multi-protocol DNSLog / HTTP / SSRF detection platform',
+                'welcome.register': 'Register',
+                'welcome.login': 'Open console',
+                'welcome.docs': 'API Docs'
+            }
+        };
+    </script>
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<div class="shell">
+    <header>
+        <div class="topbar">
+            <div class="brand">DNSLogHUB<span class="cursor"></span></div>
+            <div class="topbar-actions">
+                <button class="icon-btn" type="button" id="langToggle" data-i18n-title="lang_toggle">EN</button>
+                <button class="icon-btn" type="button" id="themeToggle" data-i18n-title="theme_toggle">浅色</button>
+            </div>
+        </div>
+    </header>
+
+    <main id="main" style="text-align:center; padding: var(--space-7) 0;">
+        <h1 data-i18n="welcome.title">欢迎使用 DNSLogHUB</h1>
+        <p class="muted" data-i18n="welcome.subtitle">DNSLog / HTTP / SSRF 多协议安全检测平台</p>
+        <div class="btn-row" style="justify-content:center; margin-top: var(--space-5);">
+            <a class="btn btn-primary" href="/register" data-i18n="welcome.register">注册账户</a>
+            <a class="btn" href="/console" data-i18n="welcome.login">进入控制台</a>
+            <a class="btn btn-ghost" href="/docs" data-i18n="welcome.docs">API 文档</a>
+        </div>
+    </main>
+
+    <footer class="footer">DNSLogHUB</footer>
+</div>
+
+<script src="/js/theme.js"></script>
+<script src="/js/i18n.js"></script>
+<script>
+    (function () {
+        var themeBtn = document.getElementById('themeToggle');
+        var langBtn = document.getElementById('langToggle');
+        function syncTheme() { themeBtn.textContent = window.DNSLogHUB.getTheme() === 'dark' ? '浅色' : '深色'; }
+        function syncLang() { langBtn.textContent = I18N.lang() === 'zh-CN' ? 'EN' : '中文'; }
+        syncTheme();
+        syncLang();
+        themeBtn.addEventListener('click', function () { window.DNSLogHUB.toggleTheme(); syncTheme(); });
+        langBtn.addEventListener('click', function () { I18N.setLang(I18N.lang() === 'zh-CN' ? 'en' : 'zh-CN'); syncLang(); });
+    })();
+</script>
+</body>
+</html>

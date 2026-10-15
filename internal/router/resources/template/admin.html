@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 · DNSLogHUB</title>
+    <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<div class="shell">
+    <header>
+        <div class="topbar">
+            <div class="brand">DNSLogHUB<span class="cursor"></span> · 管理后台</div>
+            <div class="topbar-actions">
+                <button class="icon-btn" type="button" onclick="toggleTheme()">主题</button>
+                <button class="icon-btn" type="button" onclick="logout()">退出</button>
+            </div>
+        </div>
+    </header>
+
+    <main id="main">
+        <div class="panel">
+            <div class="panel-title">邀请码</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+                <input class="input" type="text" id="inviteSearch" placeholder="搜索备注/绑定子域名" style="max-width:300px">
+                <button class="btn" type="button" onclick="loadInvites()">刷新</button>
+            </div>
+            <div class="table-wrap">
+                <table class="data" id="invitesTable">
+                    <thead><tr><th>ID</th><th>哈希前缀</th><th>剩余次数</th><th>过期时间</th><th>绑定子域</th><th>备注</th><th>操作</th></tr></thead>
+                    <tbody><tr><td colspan="7" class="empty">加载中…</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">用户</div>
+            <div style="margin-bottom:12px"><button class="btn" type="button" onclick="loadUsers()">刷新</button></div>
+            <div class="table-wrap">
+                <table class="data" id="usersTable">
+                    <thead><tr><th>Token</th><th>子域名</th><th>所属域名</th><th>状态</th><th>操作</th></tr></thead>
+                    <tbody><tr><td colspan="5" class="empty">加载中…</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">配置</div>
+            <div class="btn-row">
+                <button class="btn" type="button" onclick="reloadConfig()">热加载配置</button>
+            </div>
+            <p class="muted" id="reloadResult"></p>
+        </div>
+    </main>
+
+    <footer class="footer">DNSLogHUB</footer>
+</div>
+
+<script src="/js/theme.js"></script>
+<script>
+    function toggleTheme() {
+        window.DNSLogHUB && window.DNSLogHUB.toggleTheme();
+    }
+    function adminToken() {
+        return localStorage.getItem('dnsloghub-admin-token') || '';
+    }
+    function logout() {
+        localStorage.removeItem('dnsloghub-admin-token');
+        location.href = '[[ .LoginPath ]]';
+    }
+    function authHeaders(json) {
+        const h = { 'X-Admin-Token': adminToken() };
+        if (json) h['Content-Type'] = 'application/json';
+        return h;
+    }
+    async function loadInvites() {
+        const q = document.getElementById('inviteSearch').value.trim();
+        const res = await fetch('/api/admin/invites?q=' + encodeURIComponent(q), { headers: authHeaders(false) });
+        if (res.status === 403) { location.href = '/admin'; return; }
+        const data = await res.json();
+        const tb = document.querySelector('#invitesTable tbody');
+        if (!data.data || !data.data.items || data.data.items.length === 0) {
+            tb.innerHTML = '<tr><td colspan="7" class="empty">暂无邀请码</td></tr>';
+            return;
+        }
+        tb.innerHTML = data.data.items.map(i => `
+            <tr>
+                <td>${i.id}</td>
+                <td><code>${i.hashPrefix}…</code></td>
+                <td>${i.remainingUses < 0 ? '不限' : i.remainingUses}</td>
+                <td>${i.expiresAt || '—'}</td>
+                <td>${i.boundSubdomain || '不限'}</td>
+                <td>${i.note || '—'}</td>
+                <td><button class="btn btn-danger" onclick="revokeInvite(${i.id})">作废</button></td>
+            </tr>`).join('');
+    }
+    async function revokeInvite(id) {
+        if (!confirm('确认作废该邀请码？')) return;
+        const res = await fetch('/api/admin/invites/revoke', { method: 'POST', headers: authHeaders(true), body: JSON.stringify({ id }) });
+        const data = await res.json();
+        alert(res.ok ? '已作废' : (data.message || '操作失败'));
+        loadInvites();
+    }
+    async function loadUsers() {
+        const res = await fetch('/api/admin/users', { headers: authHeaders(false) });
+        if (res.status === 403) { location.href = '/admin'; return; }
+        const data = await res.json();
+        const tb = document.querySelector('#usersTable tbody');
+        const items = (data.data && data.data.items) || [];
+        if (items.length === 0) {
+            tb.innerHTML = '<tr><td colspan="5" class="empty">暂无用户</td></tr>';
+            return;
+        }
+        tb.innerHTML = items.map(u => `
+            <tr>
+                <td><code>${u.token}</code></td>
+                <td>${u.subdomain}</td>
+                <td>${u.domain || '—'}</td>
+                <td><span class="badge ${u.enabled ? 'badge-DNS' : 'badge-RMI'}">${u.enabled ? '启用' : '禁用'}</span></td>
+                <td>
+                    <button class="btn ${u.enabled ? 'btn-danger' : 'btn-primary'}" onclick="toggleUser('${u.subdomain}', ${!u.enabled})">${u.enabled ? '禁用' : '启用'}</button>
+                    <button class="btn btn-ghost" onclick="resetSubdomain('${u.subdomain}')">改子域</button>
+                </td>
+            </tr>`).join('');
+    }
+    async function toggleUser(subdomain, enable) {
+        const path = enable ? '/api/admin/users/enable' : '/api/admin/users/disable';
+        const res = await fetch(path, { method: 'POST', headers: authHeaders(true), body: JSON.stringify({ token: subdomain }) });
+        const data = await res.json();
+        alert(res.ok ? '操作成功' : (data.message || '操作失败'));
+        loadUsers();
+    }
+    async function resetSubdomain(oldSub) {
+        const ns = prompt('新子域名（旧：' + oldSub + '）');
+        if (!ns) return;
+        const res = await fetch('/api/admin/users/reset-subdomain', { method: 'POST', headers: authHeaders(true), body: JSON.stringify({ token: oldSub, subdomain: ns }) });
+        const data = await res.json();
+        alert(res.ok ? '已更新' : (data.message || '操作失败'));
+        loadUsers();
+    }
+    async function reloadConfig() {
+        const res = await fetch('/api/admin/reload', { method: 'POST', headers: authHeaders(false) });
+        const data = await res.json();
+        document.getElementById('reloadResult').textContent = res.ok ? ('已热加载：enabled=' + data.data.enabled + ', rateLimit=' + data.data.rateLimitPerMinute) : (data.message || '失败');
+    }
+    (function init() {
+        if (!adminToken()) {
+            location.href = '[[ .LoginPath ]]';
+            return;
+        }
+        loadInvites();
+        loadUsers();
+    })();
+</script>
+</body>
+</html>

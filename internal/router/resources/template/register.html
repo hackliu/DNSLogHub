@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 · DNSLogHUB</title>
+    <link rel="stylesheet" href="/css/theme.css">
+    <script>
+        window.DNSLOGHUB_DICT = {
+            'zh-CN': {
+                theme_toggle: '切换明暗主题',
+                lang_toggle: '切换语言',
+                back: '← 返回首页',
+                'register.title': '注册账户',
+                'register.token': '认证 Token',
+                'register.token_hint': '8-64 位，仅字母、数字、下划线、连字符',
+                'register.subdomain': '专属子域名',
+                'register.subdomain_hint': '1-63 位小写字母、数字、连字符',
+                'register.domain': '所属域名',
+                'register.domain_hint': '选择回调域名（默认主域名）',
+                'register.invite': '邀请码',
+                'register.submit': '提交注册',
+                'register.submitting': '提交中…',
+                'register.success': '注册成功',
+                'register.request_failed': '请求失败'
+            },
+            'en': {
+                theme_toggle: 'Toggle theme',
+                lang_toggle: 'Switch language',
+                back: '← Back home',
+                'register.title': 'Register account',
+                'register.token': 'Auth Token',
+                'register.token_hint': '8-64 chars; letters, digits, underscore, hyphen only',
+                'register.subdomain': 'Dedicated subdomain',
+                'register.subdomain_hint': '1-63 lowercase letters, digits, hyphen',
+                'register.domain': 'Domain',
+                'register.domain_hint': 'Select callback domain (default primary)',
+                'register.invite': 'Invite code',
+                'register.submit': 'Submit',
+                'register.submitting': 'Submitting…',
+                'register.success': 'Registered successfully',
+                'register.request_failed': 'Request failed'
+            }
+        };
+    </script>
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<div class="shell">
+    <header>
+        <div class="topbar">
+            <div class="brand">DNSLogHUB<span class="cursor"></span></div>
+            <div class="topbar-actions">
+                <button class="icon-btn" type="button" id="langToggle" data-i18n-title="lang_toggle">EN</button>
+                <button class="icon-btn" type="button" id="themeToggle" data-i18n-title="theme_toggle">浅色</button>
+            </div>
+        </div>
+    </header>
+
+    <main id="main" style="max-width:480px; margin:0 auto;">
+        <p style="margin-bottom: var(--space-4);"><a href="/" data-i18n="back">← 返回首页</a></p>
+        <h1 data-i18n="register.title">注册账户</h1>
+
+        <form id="regForm" class="panel" novalidate>
+            <div class="field">
+                <label class="required" for="token" data-i18n="register.token">认证 Token</label>
+                <input class="input" type="text" id="token" name="token" required minlength="8" maxlength="64"
+                       autocomplete="off" spellcheck="false" aria-describedby="token-hint">
+                <small class="hint" id="token-hint" data-i18n="register.token_hint">8-64 位，仅字母、数字、下划线、连字符</small>
+            </div>
+
+            <div class="field">
+                <label class="required" for="subdomain" data-i18n="register.subdomain">专属子域名</label>
+                <input class="input" type="text" id="subdomain" name="subdomain" required
+                       pattern="[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?" autocomplete="off" spellcheck="false"
+                       aria-describedby="subdomain-hint">
+                <small class="hint" id="subdomain-hint" data-i18n="register.subdomain_hint">1-63 位小写字母、数字、连字符</small>
+            </div>
+
+            <div class="field">
+                <label class="required" for="domain" data-i18n="register.domain">所属域名</label>
+                <select class="input" id="domain" name="domain" aria-describedby="domain-hint"></select>
+                <small class="hint" id="domain-hint" data-i18n="register.domain_hint">选择回调域名（默认主域名）</small>
+            </div>
+
+            <div class="field">
+                <label class="required" for="inviteCode" data-i18n="register.invite">邀请码</label>
+                <input class="input" type="text" id="inviteCode" name="inviteCode" required
+                       autocomplete="off" spellcheck="false">
+            </div>
+
+            <button class="btn btn-primary" type="submit" id="submitBtn" data-i18n="register.submit">提交注册</button>
+            <p class="form-alert" id="msg" role="status" aria-live="polite"></p>
+        </form>
+    </main>
+
+    <footer class="footer">DNSLogHUB</footer>
+</div>
+
+<script src="/js/theme.js"></script>
+<script src="/js/i18n.js"></script>
+<script>
+    (function () {
+        var themeBtn = document.getElementById('themeToggle');
+        var langBtn = document.getElementById('langToggle');
+        function syncTheme() { themeBtn.textContent = window.DNSLogHUB.getTheme() === 'dark' ? '浅色' : '深色'; }
+        function syncLang() { langBtn.textContent = I18N.lang() === 'zh-CN' ? 'EN' : '中文'; }
+        syncTheme();
+        syncLang();
+        themeBtn.addEventListener('click', function () { window.DNSLogHUB.toggleTheme(); syncTheme(); });
+        langBtn.addEventListener('click', function () { I18N.setLang(I18N.lang() === 'zh-CN' ? 'en' : 'zh-CN'); syncLang(); });
+    })();
+
+    (async function loadDomains() {
+        try {
+            const res = await fetch('/api/domains');
+            const data = await res.json();
+            const sel = document.getElementById('domain');
+            const domains = (data.data && data.data.domains) || [];
+            domains.forEach(function (d) {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d;
+                sel.appendChild(opt);
+            });
+        } catch (e) {}
+    })();
+
+    document.getElementById('regForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var fd = new FormData(e.target);
+        var body = {
+            token: (fd.get('token') || '').trim(),
+            subdomain: (fd.get('subdomain') || '').trim(),
+            domain: (fd.get('domain') || '').trim(),
+            inviteCode: (fd.get('inviteCode') || '').trim()
+        };
+        var msg = document.getElementById('msg');
+        var btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.textContent = I18N.t('register.submitting');
+        msg.setAttribute('role', 'status');
+        try {
+            var res = await fetch('/api/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept-Language': I18N.lang()
+                },
+                body: JSON.stringify(body)
+            });
+            var data = await res.json();
+            if (data.code === 200) {
+                msg.textContent = I18N.t('register.success') + ' — ' + data.data.subdomain;
+            } else {
+                msg.setAttribute('role', 'alert');
+                msg.textContent = data.msg || I18N.t('register.request_failed');
+            }
+        } catch (err) {
+            msg.setAttribute('role', 'alert');
+            msg.textContent = I18N.t('register.request_failed') + ': ' + err;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = I18N.t('register.submit');
+        }
+    });
+</script>
+</body>
+</html>

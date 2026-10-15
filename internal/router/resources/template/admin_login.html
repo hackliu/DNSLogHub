@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员登录 · DNSLogHUB</title>
+    <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<div class="shell">
+    <header>
+        <div class="topbar">
+            <div class="brand">DNSLogHUB<span class="cursor"></span></div>
+        </div>
+    </header>
+
+    <main id="main" style="max-width:420px; margin:0 auto; padding-top: var(--space-7);">
+        <h1>管理员登录</h1>
+        <form id="loginForm" class="panel" novalidate>
+            <div class="field">
+                <label class="required" for="token">管理员 Token</label>
+                <input class="input" type="password" id="token" autocomplete="off" spellcheck="false" autofocus>
+            </div>
+            <button class="btn btn-primary" type="submit" id="submitBtn">进入管理后台</button>
+            <p class="form-alert" id="msg" role="alert" aria-live="polite"></p>
+        </form>
+    </main>
+
+    <footer class="footer">DNSLogHUB</footer>
+</div>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const token = document.getElementById('token').value.trim();
+        const msg = document.getElementById('msg');
+        const btn = document.getElementById('submitBtn');
+        if (!token) {
+            msg.textContent = '请输入管理员 Token';
+            return;
+        }
+        btn.disabled = true;
+        msg.textContent = '';
+        try {
+            const res = await fetch('/api/admin/ping', { headers: { 'X-Admin-Token': token } });
+            if (res.ok) {
+                localStorage.setItem('dnsloghub-admin-token', token);
+                location.href = '[[ .DashboardPath ]]';
+            } else {
+                msg.textContent = 'Token 无效，请重试';
+                btn.disabled = false;
+            }
+        } catch (err) {
+            msg.textContent = '请求失败，请重试';
+            btn.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>

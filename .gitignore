@@ -1,0 +1,12 @@
+.idea
+.DS_Store
+dist/
+build/
+data/
+logs/
+*.exe
+
+# 内部开发文档（不随公开发布）
+job.md
+PROJECT_ANALYSIS.md
+PHASE1_PLAN.md

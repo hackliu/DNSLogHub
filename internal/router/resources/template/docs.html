@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 文档 · DNSLogHUB</title>
+    <link rel="stylesheet" href="/css/theme.css">
+    <script>
+        window.DNSLOGHUB_DICT = {
+            'zh-CN': {
+                theme_toggle: '切换明暗主题',
+                lang_toggle: '切换语言',
+                back: '← 返回首页',
+                'docs.title': 'DNSLogHUB API 文档',
+                'docs.intro': 'DNSLogHUB 提供 DNS / HTTP / LDAP / RMI 多协议外带数据捕获，接口统一返回 JSON：',
+                'docs.auth': '1. 鉴权',
+                'docs.auth.body': '除 /api/verifyToken、/api/register、/api/ip 外，其余接口需在请求头携带 token：',
+                'docs.register': '2. 注册（可选，需开启 Register.enabled）',
+                'docs.endpoints': '3. 接口一览',
+                'docs.examples': '4. 调用示例',
+                'docs.errors': '5. 错误码与限流',
+                'docs.integration': '6. 对接渗透测试工具',
+                'th.method': '方法',
+                'th.path': '路径',
+                'th.auth': '鉴权',
+                'th.desc': '说明'
+            },
+            'en': {
+                theme_toggle: 'Toggle theme',
+                lang_toggle: 'Switch language',
+                back: '← Back home',
+                'docs.title': 'DNSLogHUB API Docs',
+                'docs.intro': 'DNSLogHUB captures DNS / HTTP / LDAP / RMI out-of-band data. All endpoints return JSON:',
+                'docs.auth': '1. Authentication',
+                'docs.auth.body': 'Except /api/verifyToken, /api/register and /api/ip, all endpoints require a token header:',
+                'docs.register': '2. Registration (optional, requires Register.enabled)',
+                'docs.endpoints': '3. Endpoints',
+                'docs.examples': '4. Examples',
+                'docs.errors': '5. Error codes & rate limits',
+                'docs.integration': '6. Integrating with pentest tools',
+                'th.method': 'Method',
+                'th.path': 'Path',
+                'th.auth': 'Auth',
+                'th.desc': 'Description'
+            }
+        };
+    </script>
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<div class="shell">
+    <header>
+        <div class="topbar">
+            <div class="brand">DNSLogHUB<span class="cursor"></span></div>
+            <div class="topbar-actions">
+                <button class="icon-btn" type="button" id="langToggle" data-i18n-title="lang_toggle">EN</button>
+                <button class="icon-btn" type="button" id="themeToggle" data-i18n-title="theme_toggle">浅色</button>
+            </div>
+        </div>
+    </header>
+
+    <main id="main">
+        <p style="margin-bottom: var(--space-4);"><a href="/" data-i18n="back">← 返回首页</a></p>
+        <h1 data-i18n="docs.title">DNSLogHUB API 文档</h1>
+        <p class="muted"><span data-i18n="docs.intro">DNSLogHUB 提供 DNS / HTTP / LDAP / RMI 多协议外带数据捕获，接口统一返回 JSON：</span>
+            <code>{"code": 200, "msg": "success", "data": ...}</code></p>
+
+        <div class="panel">
+            <h2 data-i18n="docs.auth">1. 鉴权</h2>
+            <p data-i18n="docs.auth.body">除 /api/verifyToken、/api/register、/api/ip 外，其余接口需在请求头携带 token：</p>
+            <pre>token: your_token</pre>
+        </div>
+
+        <div class="panel">
+            <h2 data-i18n="docs.register">2. 注册（可选，需开启 Register.enabled）</h2>
+            <p><code>POST /api/register</code>，需邀请码：</p>
+            <pre>
+curl -X POST http://localhost:8000/api/register \
+  -H 'Content-Type: application/json' \
+  -d '{"token":"my_token_123","subdomain":"mylog","inviteCode":"INVITE-CODE"}'</pre>
+        </div>
+
+        <div class="panel">
+            <h2 data-i18n="docs.endpoints">3. 接口一览</h2>
+            <div class="table-wrap">
+                <table class="data">
+                    <thead>
+                    <tr>
+                        <th data-i18n="th.method">方法</th>
+                        <th data-i18n="th.path">路径</th>
+                        <th data-i18n="th.auth">鉴权</th>
+                        <th data-i18n="th.desc">说明</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr><td>ANY</td><td>/api/verifyToken</td><td>否</td><td>校验 token，返回子域名</td></tr>
+                    <tr><td>POST</td><td>/api/register</td><td>否</td><td>用户注册（邀请码）</td></tr>
+                    <tr><td>GET</td><td>/api/ip</td><td>否</td><td>查询本机来源 IP 归属</td></tr>
+                    <tr><td>GET</td><td>/api/ip/:ip</td><td>否</td><td>查询指定 IP 归属</td></tr>
+                    <tr><td>ANY</td><td>/api/getDnsData</td><td>是</td><td>获取全部记录</td></tr>
+                    <tr><td>ANY</td><td>/api/clean</td><td>是</td><td>清空记录</td></tr>
+                    <tr><td>ANY</td><td>/api/getDnsData_clear</td><td>是</td><td>取后即清</td></tr>
+                    <tr><td>POST</td><td>/api/verifyDns</td><td>是</td><td>验证单条 DNS</td></tr>
+                    <tr><td>POST</td><td>/api/bulkVerifyDns</td><td>是</td><td>批量验证 DNS</td></tr>
+                    <tr><td>POST</td><td>/api/verifyHttp</td><td>是</td><td>验证单条 HTTP 回调</td></tr>
+                    <tr><td>POST</td><td>/api/bulkVerifyHttp</td><td>是</td><td>批量验证 HTTP</td></tr>
+                    <tr><td>POST</td><td>/api/setARecord</td><td>是</td><td>临时设置 A 记录</td></tr>
+                    <tr><td>POST</td><td>/api/setTXTRecord</td><td>是</td><td>临时设置 TXT 记录</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2 data-i18n="docs.examples">4. 调用示例</h2>
+            <h3>4.1 验证 Token</h3>
+            <pre>
+curl -X POST http://localhost:8000/api/verifyToken \
+  -H 'Content-Type: application/json' \
+  -d '{"token":"admin"}'</pre>
+            <pre>
+import requests
+r = requests.post('http://localhost:8000/api/verifyToken', json={'token': 'admin'})
+print(r.json())</pre>
+
+            <h3>4.2 生成随机子域名并验证回连</h3>
+            <pre>
+# 1) 解析随机子域名，例如 abc123.mylog.example.com
+# 2) 在目标上触发该域名的解析后，验证是否收到回连
+curl -X POST http://localhost:8000/api/verifyDns \
+  -H 'token: your_token' -H 'Content-Type: application/json' \
+  -d '{"query":"abc123.mylog.example.com"}'</pre>
+
+            <h3>4.3 SSRF / 外带探测对接</h3>
+            <p>访问 <code>http://&lt;host&gt;/&lt;subdomain&gt;/&lt;随机串&gt;</code> 触发 HTTP 回调，再验证：</p>
+            <pre>
+curl -X POST http://localhost:8000/api/verifyHttp \
+  -H 'token: your_token' -H 'Content-Type: application/json' \
+  -d '{"query":"/mylog/abc123"}'</pre>
+        </div>
+
+        <div class="panel">
+            <h2 data-i18n="docs.errors">5. 错误码与限流</h2>
+            <ul>
+                <li><code>200</code> 成功（业务 <code>msg=Not Found</code> 表示未命中记录）</li>
+                <li><code>400</code> 请求参数不合法</li>
+                <li><code>401</code> token 无效（HTTP 状态为 401，接口层 <code>code=401</code>）</li>
+                <li><code>403</code> 邀请码无效 / 注册未开启</li>
+                <li><code>409</code> token 或子域名冲突</li>
+                <li><code>429</code> 触发限流（注册默认每 IP 每分钟 5 次）</li>
+            </ul>
+        </div>
+
+        <div class="panel">
+            <h2 data-i18n="docs.integration">6. 对接渗透测试工具</h2>
+            <ul>
+                <li><b>SQLMap 外带</b>：将 <code>--dns-domain</code> 或注入 payload 中的域名替换为随机子域名，命中后经 <code>/api/getDnsData</code> 读取。</li>
+                <li><b>Nuclei / 自定义模板</b>：将占位符替换为 DNSLogHUB 随机子域名，配合 <code>/api/bulkVerifyDns</code> 批量确认。</li>
+                <li><b>Burp Collaborator 替代</b>：payload 中注入 <code>&lt;随机&gt;.&lt;你的子域&gt;.&lt;域名&gt;</code>，通过本平台观察 DNS/HTTP 回连。</li>
+                <li><b>Go SDK</b>：<code>pkg/sdk</code> 提供 <code>NewDnsLogClient</code> / <code>VerifyDns</code> / <code>VerifyDnsV2</code>（批量）等方法。</li>
+            </ul>
+        </div>
+    </main>
+
+    <footer class="footer">DNSLogHUB</footer>
+</div>
+
+<script src="/js/theme.js"></script>
+<script src="/js/i18n.js"></script>
+<script>
+    (function () {
+        var themeBtn = document.getElementById('themeToggle');
+        var langBtn = document.getElementById('langToggle');
+        function syncTheme() { themeBtn.textContent = window.DNSLogHUB.getTheme() === 'dark' ? '浅色' : '深色'; }
+        function syncLang() { langBtn.textContent = I18N.lang() === 'zh-CN' ? 'EN' : '中文'; }
+        syncTheme();
+        syncLang();
+        themeBtn.addEventListener('click', function () { window.DNSLogHUB.toggleTheme(); syncTheme(); });
+        langBtn.addEventListener('click', function () { I18N.setLang(I18N.lang() === 'zh-CN' ? 'en' : 'zh-CN'); syncLang(); });
+    })();
+</script>
+</body>
+</html>
