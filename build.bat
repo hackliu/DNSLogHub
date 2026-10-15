@@ -50,6 +50,7 @@ mkdir "%STAGE%"
 copy "dist\%SERVER%" "%STAGE%\" >nul
 copy "dist\%INV%" "%STAGE%\" >nul
 copy config.yaml "%STAGE%\" >nul
+if exist scripts xcopy /e /i /y scripts "%STAGE%\scripts" >nul
 
 set "ARCHIVE=dnsloghub-%GOOS%-%GOARCH%.tar.gz"
 tar -czf "dist\%ARCHIVE%" -C "%STAGE%" .

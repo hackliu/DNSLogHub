@@ -56,6 +56,10 @@ for t in "${targets[@]}"; do
   stage="$DIST/.stage-${GOOS}-${GOARCH}"
   mkdir -p "$stage"
   cp "$DIST/$server" "$DIST/$inv" config.yaml "$stage"/
+  if [[ -d scripts ]]; then
+    cp -r scripts "$stage/"
+    chmod +x "$stage"/scripts/*.sh 2>/dev/null || true
+  fi
   archive="dnsloghub-${GOOS}-${GOARCH}.tar.gz"
   tar -czf "$DIST/$archive" -C "$stage" .
   rm -rf "$stage"
