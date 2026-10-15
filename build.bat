@@ -47,8 +47,8 @@ go build -trimpath -ldflags "%LDFLAGS%" -o "dist\%INV%" ./cmd/invitegen || exit 
 set "STAGE=dist\.stage-%GOOS%-%GOARCH%"
 if exist "%STAGE%" rmdir /s /q "%STAGE%"
 mkdir "%STAGE%"
-copy "dist\%SERVER%" "%STAGE%\" >nul
-copy "dist\%INV%" "%STAGE%\" >nul
+copy "dist\%SERVER%" "%STAGE%\dnsloghub%EXE%" >nul
+copy "dist\%INV%" "%STAGE%\invitegen%EXE%" >nul
 copy config.yaml "%STAGE%\" >nul
 if exist scripts xcopy /e /i /y scripts "%STAGE%\scripts" >nul
 

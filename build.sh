@@ -55,7 +55,9 @@ for t in "${targets[@]}"; do
 
   stage="$DIST/.stage-${GOOS}-${GOARCH}"
   mkdir -p "$stage"
-  cp "$DIST/$server" "$DIST/$inv" config.yaml "$stage"/
+  cp "$DIST/$server" "$stage/dnsloghub${exe}"
+  cp "$DIST/$inv" "$stage/invitegen${exe}"
+  cp config.yaml "$stage"/
   if [[ -d scripts ]]; then
     cp -r scripts "$stage/"
     chmod +x "$stage"/scripts/*.sh 2>/dev/null || true
